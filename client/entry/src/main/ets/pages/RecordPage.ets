@@ -2,7 +2,6 @@ import { audio } from '@kit.AudioKit';
 import { abilityAccessCtrl, common, Permissions } from '@kit.AbilityKit';
 import { promptAction } from '@kit.ArkUI';
 import { AppTheme } from '../common/AppTheme';
-import { AppCard } from '../common/components/AppCard';
 import { TranscriptSegment } from '../model/Models';
 import { Api } from '../service/Api';
 import { GlobalState } from '../service/GlobalState';
@@ -12,12 +11,13 @@ type RecordState = 'idle' | 'recording' | 'paused' | 'finished';
 const CHUNK_INTERVAL_MS: number = 4000;
 
 /**
- * P2 课堂录音：AudioCapturer 采集 → 分片上传 → 云端 ASR（当前 Mock）转写实时回显。
- * 模拟器无麦克风权限/初始化失败时自动降级为「模拟模式」：定时上传占位分片，链路不断。
+ * 课堂录音（Notein 风）：左侧居中大计时 + 圆形录制按钮，右侧转写浮岛。
+ * AudioCapturer 采集 → 分片上传 → 云端 ASR 转写实时回显；
+ * 无麦克风权限/初始化失败自动降级「模拟模式」。
  */
 @Component
 export struct RecordPage {
-  pathStack: NavPathStack = new NavPathStack();
+  @StorageLink('currentTab') currentTab: string = 'record';
   @State recordState: RecordState = 'idle';
   @State title: string = '';
   @State elapsedSec: number = 0;
@@ -52,10 +52,10 @@ export struct RecordPage {
     return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
   }
 
-  // ---------- 录音控制 ----------
+  // ---------- 录音控制（与后端联动） ----------
   private async start(): Promise<void> {
     if (GlobalState.course === null) {
-      this.toast('请先在首页选择课程集合');
+      this.toast('请先选择课程');
       return;
     }
     interface CreateBody {
@@ -118,7 +118,7 @@ export struct RecordPage {
       this.simulated = false;
     } catch (e) {
       this.simulated = true;
-      this.toast(`麦克风初始化失败，进入模拟模式`);
+      this.toast('麦克风初始化失败，进入模拟模式');
     }
   }
 
@@ -158,7 +158,6 @@ export struct RecordPage {
       total += b.byteLength;
     }
     if (total === 0) {
-      // 模拟模式 / 静音间隙：上传占位字节（Mock ASR 不读内容）
       return new Uint8Array([0, 0, 0, 0]).buffer;
     }
     const out: Uint8Array = new Uint8Array(total);
@@ -215,8 +214,7 @@ export struct RecordPage {
     this.recordState = 'finished';
     GlobalState.currentSessionId = this.sessionId;
     this.toast('录音结束，转写已保存');
-    this.pathStack.pop();
-    this.pathStack.pushPathByName('sessionDetail', null);
+    this.currentTab = 'sessions';
   }
 
   // ---------- UI ----------
@@ -230,140 +228,155 @@ export struct RecordPage {
       .margin({ left: 3, right: 3 })
   }
 
+  /** 圆形操作钮（Notein 悬浮圆钮风格） */
+  @Builder
+  circleButton(label: string, size: number, bg: string, fg: string, onTap: () => void) {
+    Text(label)
+      .fontSize(size * 0.36)
+      .fontColor(fg)
+      .width(size)
+      .height(size)
+      .textAlign(TextAlign.Center)
+      .borderRadius(size / 2)
+      .backgroundColor(bg)
+      .shadow({ radius: 14, color: 'rgba(17,17,17,0.12)', offsetX: 0, offsetY: 4 })
+      .onClick(() => {
+        onTap();
+      })
+  }
+
   build() {
-    Row({ space: AppTheme.SPACE_L }) {
-      // 左栏：录音控制
-      Column({ space: AppTheme.SPACE_L }) {
-        Text(GlobalState.course === null ? '' :
-          `${GlobalState.course.name} · ${GlobalState.course.class_name}`)
-          .fontSize(AppTheme.FONT_BODY)
-          .fontColor(AppTheme.TEXT_SECONDARY)
-          .width('100%')
+    Row({ space: AppTheme.SPACE_XL }) {
+      // 左：录音控制台
+      Column({ space: AppTheme.SPACE_XL }) {
+        Blank().layoutWeight(1)
 
         TextInput({ text: this.title, placeholder: '本次课时标题' })
           .fontSize(AppTheme.FONT_SUBTITLE)
+          .textAlign(TextAlign.Center)
+          .backgroundColor('transparent')
           .enabled(this.recordState === 'idle')
           .onChange((v: string) => {
             this.title = v;
           })
 
-        AppCard() {
-          Column({ space: AppTheme.SPACE_L }) {
-            Text(this.fmtDuration())
-              .fontSize(44)
-              .fontWeight(FontWeight.Bold)
-              .fontColor(this.recordState === 'recording' ? AppTheme.PRIMARY : AppTheme.TEXT_PRIMARY)
-            Row() {
-              this.waveBar(14)
-              this.waveBar(26)
-              this.waveBar(38)
-              this.waveBar(22)
-              this.waveBar(44)
-              this.waveBar(30)
-              this.waveBar(18)
-              this.waveBar(34)
-              this.waveBar(26)
-              this.waveBar(14)
-            }
-            .height(60)
-            .alignItems(VerticalAlign.Center)
+        Text(this.fmtDuration())
+          .fontSize(64)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(this.recordState === 'recording' ? AppTheme.INK : AppTheme.TEXT_TERTIARY)
 
-            if (this.simulated && this.recordState !== 'idle') {
-              Text('模拟模式：无真实音频，定时上传占位分片')
-                .fontSize(AppTheme.FONT_CAPTION)
-                .fontColor(AppTheme.WARNING)
-            }
-            if (this.uploadFailures > 0) {
-              Text(`${this.uploadFailures} 个分片上传失败（可稍后补传）`)
-                .fontSize(AppTheme.FONT_CAPTION)
-                .fontColor(AppTheme.DANGER)
-            }
-          }
-          .width('100%')
-          .alignItems(HorizontalAlign.Center)
+        Row() {
+          this.waveBar(14)
+          this.waveBar(28)
+          this.waveBar(40)
+          this.waveBar(24)
+          this.waveBar(46)
+          this.waveBar(32)
+          this.waveBar(18)
+          this.waveBar(36)
+          this.waveBar(26)
+          this.waveBar(14)
         }
+        .height(56)
+        .alignItems(VerticalAlign.Center)
 
-        Row({ space: AppTheme.SPACE_M }) {
+        // 主控按钮
+        Row({ space: AppTheme.SPACE_XL }) {
           if (this.recordState === 'idle') {
-            Button('开始录音')
-              .layoutWeight(1)
-              .backgroundColor(AppTheme.PRIMARY)
-              .borderRadius(AppTheme.RADIUS_BTN)
-              .onClick(() => {
-                this.start();
-              })
+            this.circleButton('🎙', 84, AppTheme.PRIMARY, '#FFFFFF', (): void => {
+              this.start();
+            })
           } else if (this.recordState === 'recording' || this.recordState === 'paused') {
-            Button(this.recordState === 'recording' ? '暂停' : '继续')
-              .layoutWeight(1)
-              .backgroundColor(AppTheme.BG_CARD)
-              .fontColor(AppTheme.PRIMARY)
-              .borderRadius(AppTheme.RADIUS_BTN)
-              .onClick(() => {
+            this.circleButton(this.recordState === 'recording' ? '⏸' : '▶', 60,
+              AppTheme.BG_CARD, AppTheme.INK, (): void => {
                 this.pauseOrResume();
               })
-            Button('结束')
-              .layoutWeight(1)
-              .backgroundColor(AppTheme.DANGER)
-              .borderRadius(AppTheme.RADIUS_BTN)
-              .onClick(() => {
-                this.finish();
-              })
+            this.circleButton('■', 84, AppTheme.DANGER, '#FFFFFF', (): void => {
+              this.finish();
+            })
           }
         }
-        .width('100%')
+
+        Text(this.recordState === 'idle' ? '点击开始录音' :
+          (this.recordState === 'paused' ? '已暂停' : '录音中'))
+          .fontSize(AppTheme.FONT_CAPTION)
+          .fontColor(AppTheme.TEXT_TERTIARY)
+
+        if (this.simulated && this.recordState !== 'idle') {
+          Text('模拟模式：无真实音频，定时上传占位分片')
+            .fontSize(AppTheme.FONT_CAPTION)
+            .fontColor(AppTheme.WARNING)
+            .padding({ left: 12, right: 12, top: 4, bottom: 4 })
+            .borderRadius(999)
+            .backgroundColor(AppTheme.tagBg(AppTheme.WARNING))
+        }
+        if (this.uploadFailures > 0) {
+          Text(`${this.uploadFailures} 个分片上传失败`)
+            .fontSize(AppTheme.FONT_CAPTION)
+            .fontColor(AppTheme.DANGER)
+        }
+        Blank().layoutWeight(1)
       }
-      .width(320)
+      .width(360)
       .height('100%')
 
-      // 右栏：实时转写
+      // 右：实时转写浮岛
       Column({ space: AppTheme.SPACE_M }) {
-        Text('实时转写').fontSize(AppTheme.FONT_BODY).fontColor(AppTheme.TEXT_SECONDARY).width('100%')
+        Text('实时转写')
+          .fontSize(AppTheme.FONT_SUBTITLE)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(AppTheme.INK)
+          .width('100%')
+
         Column() {
-          AppCard({ fillHeight: true }) {
-            if (this.segments.length === 0) {
-              Column() {
-                Text(this.recordState === 'idle' ?
-                  '开始录音后，云端转写文字将在此实时显示' : '等待首个分片转写…')
-                  .fontSize(AppTheme.FONT_BODY)
-                  .fontColor(AppTheme.TEXT_TERTIARY)
-              }
-              .width('100%')
-              .height('100%')
-              .justifyContent(FlexAlign.Center)
-            } else {
-              List({ space: AppTheme.SPACE_L, scroller: this.scroller }) {
-                ForEach(this.segments, (seg: TranscriptSegment) => {
-                  ListItem() {
-                    Column({ space: AppTheme.SPACE_XS }) {
-                      Text(`#${seg.seq + 1} · ${Math.floor(seg.start_ms / 60000)}:${
-                        ((seg.start_ms % 60000) / 1000).toFixed(0).padStart(2, '0')}`)
-                        .fontSize(AppTheme.FONT_CAPTION)
-                        .fontColor(AppTheme.PRIMARY)
-                      Text(seg.text)
-                        .fontSize(AppTheme.FONT_BODY)
-                        .fontColor(AppTheme.TEXT_PRIMARY)
-                        .lineHeight(22)
-                    }
-                    .width('100%')
-                    .alignItems(HorizontalAlign.Start)
-                  }
-                }, (seg: TranscriptSegment) => `${seg.seq}`)
-              }
-              .width('100%')
-              .height('100%')
-              .scrollBar(BarState.Auto)
+          if (this.segments.length === 0) {
+            Column({ space: AppTheme.SPACE_M }) {
+              Text('💬').fontSize(40)
+              Text(this.recordState === 'idle' ?
+                '开始录音后，云端转写文字将在此实时显示' : '等待首个分片转写…')
+                .fontSize(AppTheme.FONT_BODY)
+                .fontColor(AppTheme.TEXT_TERTIARY)
             }
+            .width('100%')
+            .height('100%')
+            .justifyContent(FlexAlign.Center)
+          } else {
+            List({ space: AppTheme.SPACE_L, scroller: this.scroller }) {
+              ForEach(this.segments, (seg: TranscriptSegment) => {
+                ListItem() {
+                  Column({ space: AppTheme.SPACE_XS }) {
+                    Text(`${Math.floor(seg.start_ms / 60000)}:${
+                      ((seg.start_ms % 60000) / 1000).toFixed(0).padStart(2, '0')}`)
+                      .fontSize(AppTheme.FONT_CAPTION)
+                      .fontColor(AppTheme.PRIMARY)
+                    Text(seg.text)
+                      .fontSize(AppTheme.FONT_BODY)
+                      .fontColor(AppTheme.TEXT_PRIMARY)
+                      .lineHeight(24)
+                  }
+                  .width('100%')
+                  .alignItems(HorizontalAlign.Start)
+                }
+              }, (seg: TranscriptSegment) => `${seg.seq}`)
+            }
+            .width('100%')
+            .height('100%')
+            .scrollBar(BarState.Auto)
           }
         }
         .layoutWeight(1)
         .width('100%')
+        .padding(AppTheme.SPACE_L)
+        .borderRadius(AppTheme.RADIUS_CARD)
+        .backgroundColor(AppTheme.BG_CARD)
+        .shadow({ radius: 16, color: 'rgba(17,17,17,0.04)', offsetX: 0, offsetY: 4 })
       }
       .layoutWeight(1)
       .height('100%')
     }
     .width('100%')
     .height('100%')
-    .padding(AppTheme.SPACE_L)
+    .padding(AppTheme.SPACE_XXL)
     .backgroundColor(AppTheme.BG_PAGE)
     .alignItems(VerticalAlign.Top)
   }

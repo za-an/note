@@ -18,7 +18,6 @@ interface PendingApply {
  */
 @Component
 export struct AiNotePage {
-  pathStack: NavPathStack = new NavPathStack();
   // 左栏
   @State leftOpen: boolean = true;
   @State chatSessions: ChatSessionInfo[] = [];
@@ -436,7 +435,7 @@ export struct AiNotePage {
         Button('保存')
           .fontSize(AppTheme.FONT_BODY)
           .backgroundColor(AppTheme.PRIMARY)
-          .borderRadius(AppTheme.RADIUS_BTN)
+          .borderRadius(999)
           .onClick(() => {
             this.saveNote();
           })
@@ -465,7 +464,7 @@ export struct AiNotePage {
           Text('还没有笔记').fontSize(AppTheme.FONT_BODY).fontColor(AppTheme.TEXT_TERTIARY)
           Button('新建随堂笔记')
             .backgroundColor(AppTheme.PRIMARY)
-            .borderRadius(AppTheme.RADIUS_BTN)
+            .borderRadius(999)
             .onClick(() => {
               this.createNote();
             })
@@ -614,7 +613,7 @@ export struct AiNotePage {
           .fontSize(AppTheme.FONT_BODY)
           .enabled(!this.asking)
           .backgroundColor(AppTheme.PRIMARY)
-          .borderRadius(AppTheme.RADIUS_BTN)
+          .borderRadius(999)
           .onClick(() => {
             const q: string = this.inputText;
             this.inputText = '';
@@ -643,7 +642,7 @@ export struct AiNotePage {
     }
     .width('100%')
     .height('100%')
-    .padding(AppTheme.SPACE_L)
+    .padding(AppTheme.SPACE_XL)
     .backgroundColor(AppTheme.BG_PAGE)
     .alignItems(VerticalAlign.Top)
   }

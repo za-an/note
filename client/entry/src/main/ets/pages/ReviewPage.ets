@@ -11,7 +11,6 @@ import { GlobalState } from '../service/GlobalState';
  */
 @Component
 export struct ReviewPage {
-  pathStack: NavPathStack = new NavPathStack();
   @State pendingList: Outline[] = [];
   @State selectedIndex: number = -1;
   @State editText: string = '';
@@ -176,23 +175,24 @@ export struct ReviewPage {
               .enabled(!this.busy)
               .backgroundColor(AppTheme.BG_CARD)
               .fontColor(AppTheme.TEXT_SECONDARY)
-              .borderRadius(AppTheme.RADIUS_BTN)
+              .borderRadius(999)
               .onClick(() => {
                 this.saveEdit();
               })
             Button('发布到共享池')
               .layoutWeight(1)
               .enabled(!this.busy)
-              .backgroundColor(AppTheme.SUCCESS)
-              .borderRadius(AppTheme.RADIUS_BTN)
+              .backgroundColor(AppTheme.PRIMARY)
+              .borderRadius(999)
               .onClick(() => {
                 this.review('publish');
               })
             Button('退回')
               .layoutWeight(1)
               .enabled(!this.busy)
-              .backgroundColor(AppTheme.DANGER)
-              .borderRadius(AppTheme.RADIUS_BTN)
+              .fontColor(AppTheme.DANGER)
+              .backgroundColor(AppTheme.tagBg(AppTheme.DANGER))
+              .borderRadius(999)
               .onClick(() => {
                 this.review('reject');
               })
@@ -205,7 +205,7 @@ export struct ReviewPage {
     }
     .width('100%')
     .height('100%')
-    .padding(AppTheme.SPACE_L)
+    .padding(AppTheme.SPACE_XL)
     .backgroundColor(AppTheme.BG_PAGE)
     .alignItems(VerticalAlign.Top)
   }

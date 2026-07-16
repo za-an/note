@@ -1,19 +1,18 @@
 import { AppTheme } from '../AppTheme';
 
 /**
- * 通用卡片组件。样式属性以参数形式暴露，
- * 便于后续挂属性动画 / 共享元素转场而不改调用方结构。
+ * 通用卡片 —— Notein 风：纯白、14vp 圆角、可选轻投影；
+ * 选中态为青色描边 + 浅青底。样式参数化，预留动画挂载。
  */
 @Component
 export struct AppCard {
   cardRadius: number = AppTheme.RADIUS_CARD;
   cardPadding: number = AppTheme.SPACE_L;
   cardBgColor: string = AppTheme.BG_CARD;
-  cardBorderColor: string = 'transparent';
-  cardBorderWidth: number = 0;
   @Prop selected: boolean = false;
   clickable: boolean = false;
   fillHeight: boolean = false;
+  hasShadow: boolean = false;
   onCardClick: () => void = () => {
   };
   @BuilderParam content: () => void = this.empty;
@@ -32,8 +31,19 @@ export struct AppCard {
     .borderRadius(this.cardRadius)
     .backgroundColor(this.selected ? AppTheme.PRIMARY_LIGHT : this.cardBgColor)
     .border({
-      width: this.selected ? 1 : this.cardBorderWidth,
-      color: this.selected ? AppTheme.PRIMARY : this.cardBorderColor
+      width: 1.5,
+      color: this.selected ? AppTheme.PRIMARY : 'transparent'
+    })
+    .shadow(this.hasShadow ? {
+      radius: 16,
+      color: 'rgba(17,17,17,0.05)',
+      offsetX: 0,
+      offsetY: 4
+    } : {
+      radius: 0,
+      color: 'transparent',
+      offsetX: 0,
+      offsetY: 0
     })
     .alignItems(HorizontalAlign.Start)
     .onClick(() => {

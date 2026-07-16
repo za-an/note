@@ -10,7 +10,6 @@ import { GlobalState } from '../service/GlobalState';
  */
 @Component
 export struct SessionDetailPage {
-  pathStack: NavPathStack = new NavPathStack();
   @State sessions: CourseSession[] = [];
   @State selectedIndex: number = 0;
   @State transcript: TranscriptSegment[] = [];
@@ -222,10 +221,10 @@ export struct SessionDetailPage {
           Text('AI 提纲').fontSize(AppTheme.FONT_BODY).fontColor(AppTheme.TEXT_SECONDARY)
           Text(this.statusLabel())
             .fontSize(AppTheme.FONT_CAPTION)
-            .fontColor('#FFFFFF')
-            .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-            .borderRadius(AppTheme.RADIUS_TAG)
-            .backgroundColor(this.statusColor())
+            .fontColor(this.statusColor())
+            .padding({ left: 10, right: 10, top: 3, bottom: 3 })
+            .borderRadius(999)
+            .backgroundColor(AppTheme.tagBg(this.statusColor()))
           Blank()
         }
         .width('100%')
@@ -255,7 +254,7 @@ export struct SessionDetailPage {
             .layoutWeight(1)
             .enabled(!this.generating)
             .backgroundColor(AppTheme.PRIMARY)
-            .borderRadius(AppTheme.RADIUS_BTN)
+            .borderRadius(999)
             .onClick(() => {
               this.generateOutline();
             })
@@ -263,7 +262,7 @@ export struct SessionDetailPage {
             Button('发布')
               .layoutWeight(1)
               .backgroundColor(AppTheme.SUCCESS)
-              .borderRadius(AppTheme.RADIUS_BTN)
+              .borderRadius(999)
               .onClick(() => {
                 this.review('publish');
               })
@@ -276,7 +275,7 @@ export struct SessionDetailPage {
     }
     .width('100%')
     .height('100%')
-    .padding(AppTheme.SPACE_L)
+    .padding(AppTheme.SPACE_XL)
     .backgroundColor(AppTheme.BG_PAGE)
     .alignItems(VerticalAlign.Top)
   }

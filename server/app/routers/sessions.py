@@ -119,6 +119,23 @@ class PublishBody(BaseModel):
     action: str = "publish"  # publish | reject
 
 
+class OutlineUpdate(BaseModel):
+    markdown: str
+
+
+@router.put("/{session_id}/outline")
+def update_outline(session_id: int, body: OutlineUpdate, db: Session = Depends(get_db)):
+    """教师发布前编辑提纲内容"""
+    outline = db.exec(select(Outline).where(Outline.session_id == session_id)).first()
+    if not outline:
+        raise HTTPException(404, "提纲不存在")
+    outline.markdown = body.markdown
+    outline.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(outline)
+    return outline
+
+
 @router.post("/{session_id}/outline/review")
 def review_outline(session_id: int, body: PublishBody, db: Session = Depends(get_db)):
     """教师审核：发布 → 写入该集合知识库；退回 → rejected"""

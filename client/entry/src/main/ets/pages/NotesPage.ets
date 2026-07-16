@@ -13,7 +13,6 @@ import { GlobalState } from '../service/GlobalState';
  */
 @Component
 export struct NotesPage {
-  pathStack: NavPathStack = new NavPathStack();
   @State notes: Note[] = [];
   @State selectedIndex: number = -1;
   @State editorText: string = '';
@@ -182,10 +181,10 @@ export struct NotesPage {
   tag(text: string, color: string) {
     Text(text)
       .fontSize(10)
-      .fontColor('#FFFFFF')
-      .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-      .borderRadius(AppTheme.RADIUS_TAG)
-      .backgroundColor(color)
+      .fontColor(color)
+      .padding({ left: 8, right: 8, top: 3, bottom: 3 })
+      .borderRadius(999)
+      .backgroundColor(AppTheme.tagBg(color))
   }
 
   @Builder
@@ -209,15 +208,16 @@ export struct NotesPage {
             .layoutWeight(1)
             .fontSize(AppTheme.FONT_CAPTION)
             .backgroundColor(AppTheme.PRIMARY)
-            .borderRadius(AppTheme.RADIUS_BTN)
+            .borderRadius(999)
             .onClick(() => {
               this.createNote('md');
             })
           Button('✍️ 手写笔记')
             .layoutWeight(1)
             .fontSize(AppTheme.FONT_CAPTION)
-            .backgroundColor(AppTheme.WARNING)
-            .borderRadius(AppTheme.RADIUS_BTN)
+            .fontColor(AppTheme.INK)
+            .backgroundColor(AppTheme.BG_CARD)
+            .borderRadius(999)
             .onClick(() => {
               this.createNote('handwriting');
             })
@@ -294,7 +294,7 @@ export struct NotesPage {
             Button('保存')
               .fontSize(AppTheme.FONT_BODY)
               .backgroundColor(AppTheme.PRIMARY)
-              .borderRadius(AppTheme.RADIUS_BTN)
+              .borderRadius(999)
               .onClick(() => {
                 this.saveNote();
               })
@@ -371,7 +371,7 @@ export struct NotesPage {
     }
     .width('100%')
     .height('100%')
-    .padding(AppTheme.SPACE_L)
+    .padding(AppTheme.SPACE_XL)
     .backgroundColor(AppTheme.BG_PAGE)
     .alignItems(VerticalAlign.Top)
   }
